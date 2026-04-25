@@ -1,79 +1,181 @@
-import { useMemo, useState } from "react";
-import { initialInterfaces, initialLogs } from "../mock/interfaceData";
-import type { InterfaceItem, Protocol, Status } from "../types/interface";
+import { useEffect, useMemo, useState } from "react";
+import type {
+    CreateInterfaceRequest,
+    ExecutionLog,
+    InterfaceItem,
+    Protocol,
+    Status,
+} from "../types/interface";
+import type { Organization } from "../types/organization";
 import ProtocolBadge from "../components/ui/ProtocolBadge";
 import StatusBadge from "../components/ui/StatusBadge";
+import {
+    createInterface,
+    getInterface,
+    getInterfaces,
+    retryInterface,
+    updateInterface,
+} from "../api/interfaceApi";
+import { getOrganizations } from "../api/organizationApi";
+
+const emptyForm: CreateInterfaceRequest = {
+    organizationId: 0,
+    name: "",
+    protocolType: "REST",
+    ownerTeam: "",
+    endpoint: "",
+    description: "",
+};
 
 export default function DashboardPage() {
-    const [interfaces, setInterfaces] = useState(initialInterfaces);
+    const [interfaces, setInterfaces] = useState<InterfaceItem[]>([]);
+    const [organizations, setOrganizations] = useState<Organization[]>([]);
     const [selected, setSelected] = useState<InterfaceItem | null>(null);
+    const [recentLogs, setRecentLogs] = useState<ExecutionLog[]>([]);
+
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<"ALL" | Status>("ALL");
     const [protocolFilter, setProtocolFilter] = useState<"ALL" | Protocol>("ALL");
+
+    const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<InterfaceItem | null>(null);
+    const [form, setForm] = useState<CreateInterfaceRequest>(emptyForm);
+
+    const loadInterfaces = async () => {
+        setIsLoading(true);
+        setErrorMessage("");
+
+        try {
+            const data = await getInterfaces({
+                status: statusFilter === "ALL" ? undefined : statusFilter,
+                protocolType: protocolFilter === "ALL" ? undefined : protocolFilter,
+                keyword: search.trim() || undefined,
+            });
+
+            setInterfaces(data);
+        } catch (error) {
+            setErrorMessage(
+                error instanceof Error ? error.message : "인터페이스 목록 조회 중 오류가 발생했습니다."
+            );
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const loadOrganizations = async () => {
+        try {
+            const data = await getOrganizations();
+            setOrganizations(data);
+        } catch {
+            setOrganizations([]);
+        }
+    };
+
+    useEffect(() => {
+        loadOrganizations();
+    }, []);
+
+    useEffect(() => {
+        loadInterfaces();
+    }, [statusFilter, protocolFilter]);
 
     const summary = useMemo(() => {
         const total = interfaces.length;
         const success = interfaces.filter((item) => item.status === "SUCCESS").length;
         const failed = interfaces.filter((item) => item.status === "FAILED").length;
         const pending = interfaces.filter((item) => item.status === "PENDING").length;
-        const avgResponse = Math.round(
-            interfaces.reduce((sum, item) => sum + item.avgResponseMs, 0) / total
-        );
+        const avgResponse =
+            total === 0
+                ? 0
+                : Math.round(
+                    interfaces.reduce((sum, item) => sum + item.avgResponseMs, 0) / total
+                );
 
         return {
             total,
             failed,
             pending,
-            successRate: Math.round((success / total) * 100),
+            successRate: total === 0 ? 0 : Math.round((success / total) * 100),
             avgResponse,
         };
     }, [interfaces]);
 
-    const filteredInterfaces = useMemo(() => {
-        return interfaces.filter((item) => {
-            const keyword = search.toLowerCase();
+    const openDetail = async (item: InterfaceItem) => {
+        setSelected(item);
+        setRecentLogs([]);
 
-            const matchesSearch =
-                item.name.toLowerCase().includes(keyword) ||
-                item.organization.toLowerCase().includes(keyword) ||
-                item.ownerTeam.toLowerCase().includes(keyword);
+        try {
+            const detail = await getInterface(item.id);
+            setSelected(detail.interfaceInfo);
+            setRecentLogs(detail.recentLogs);
+        } catch (error) {
+            setErrorMessage(
+                error instanceof Error ? error.message : "상세 조회 중 오류가 발생했습니다."
+            );
+        }
+    };
 
-            const matchesStatus =
-                statusFilter === "ALL" || item.status === statusFilter;
+    const handleRetry = async (id: number) => {
+        try {
+            await retryInterface(id);
+            await loadInterfaces();
 
-            const matchesProtocol =
-                protocolFilter === "ALL" || item.protocol === protocolFilter;
+            if (selected?.id === id) {
+                const detail = await getInterface(id);
+                setSelected(detail.interfaceInfo);
+                setRecentLogs(detail.recentLogs);
+            }
+        } catch (error) {
+            setErrorMessage(
+                error instanceof Error ? error.message : "재실행 중 오류가 발생했습니다."
+            );
+        }
+    };
 
-            return matchesSearch && matchesStatus && matchesProtocol;
+    const openCreateForm = () => {
+        setEditingItem(null);
+        setForm({
+            ...emptyForm,
+            organizationId: organizations[0]?.id ?? 0,
         });
-    }, [interfaces, search, statusFilter, protocolFilter]);
+        setIsFormOpen(true);
+    };
 
-    const retryInterface = (id: number) => {
-        const updatedTime = "2026-04-25 22:45:00";
+    const openEditForm = (item: InterfaceItem) => {
+        const organization = organizations.find((org) => org.name === item.organization);
 
-        setInterfaces((prev) =>
-            prev.map((item) =>
-                item.id === id
-                    ? {
-                        ...item,
-                        status: "SUCCESS",
-                        lastExecutedAt: updatedTime,
-                        avgResponseMs: 180,
-                    }
-                    : item
-            )
-        );
+        setEditingItem(item);
+        setForm({
+            organizationId: organization?.id ?? 0,
+            name: item.name,
+            protocolType: item.protocol,
+            ownerTeam: item.ownerTeam,
+            endpoint: item.endpoint,
+            description: item.description ?? "",
+        });
+        setIsFormOpen(true);
+    };
 
-        setSelected((prev) =>
-            prev?.id === id
-                ? {
-                    ...prev,
-                    status: "SUCCESS",
-                    lastExecutedAt: updatedTime,
-                    avgResponseMs: 180,
-                }
-                : prev
-        );
+    const submitForm = async () => {
+        try {
+            if (editingItem) {
+                await updateInterface(editingItem.id, form);
+            } else {
+                await createInterface(form);
+            }
+
+            setIsFormOpen(false);
+            setEditingItem(null);
+            setForm(emptyForm);
+            await loadInterfaces();
+        } catch (error) {
+            setErrorMessage(
+                error instanceof Error ? error.message : "인터페이스 저장 중 오류가 발생했습니다."
+            );
+        }
     };
 
     return (
@@ -85,6 +187,12 @@ export default function DashboardPage() {
                 <MetricCard title="대기" value={`${summary.pending}건`} />
                 <MetricCard title="평균 응답시간" value={`${summary.avgResponse}ms`} />
             </div>
+
+            {errorMessage && (
+                <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
+                    {errorMessage}
+                </div>
+            )}
 
             <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_360px]">
                 <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -100,6 +208,11 @@ export default function DashboardPage() {
                             <input
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        loadInterfaces();
+                                    }
+                                }}
                                 placeholder="기관명, 인터페이스명, 담당팀 검색"
                                 className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none transition focus:border-blue-500 focus:bg-white md:w-72"
                             />
@@ -127,6 +240,20 @@ export default function DashboardPage() {
                                 <option value="MQ">MQ</option>
                                 <option value="BATCH">BATCH</option>
                             </select>
+
+                            <button
+                                onClick={loadInterfaces}
+                                className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-semibold transition hover:bg-slate-50"
+                            >
+                                조회
+                            </button>
+
+                            <button
+                                onClick={openCreateForm}
+                                className="h-10 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700"
+                            >
+                                등록
+                            </button>
                         </div>
                     </div>
 
@@ -145,39 +272,61 @@ export default function DashboardPage() {
                             </thead>
 
                             <tbody className="divide-y divide-slate-100">
-                            {filteredInterfaces.map((item) => (
-                                <tr key={item.id} className="transition hover:bg-slate-50">
-                                    <td className="px-4 py-4">
-                                        <p className="font-semibold">{item.name}</p>
-                                        <p className="mt-1 text-xs text-slate-500">{item.ownerTeam}</p>
-                                    </td>
-                                    <td className="px-4 py-4 text-slate-700">{item.organization}</td>
-                                    <td className="px-4 py-4">
-                                        <ProtocolBadge protocol={item.protocol} />
-                                    </td>
-                                    <td className="px-4 py-4">
-                                        <StatusBadge status={item.status} />
-                                    </td>
-                                    <td className="px-4 py-4 text-slate-500">{item.lastExecutedAt}</td>
-                                    <td className="px-4 py-4 font-medium">{item.avgResponseMs}ms</td>
-                                    <td className="px-4 py-4">
-                                        <div className="flex justify-end gap-2">
-                                            <button
-                                                onClick={() => setSelected(item)}
-                                                className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold transition hover:bg-slate-100"
-                                            >
-                                                상세
-                                            </button>
-                                            <button
-                                                onClick={() => retryInterface(item.id)}
-                                                className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700"
-                                            >
-                                                재실행
-                                            </button>
-                                        </div>
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={7} className="px-4 py-10 text-center text-slate-500">
+                                        데이터를 불러오는 중입니다.
                                     </td>
                                 </tr>
-                            ))}
+                            ) : interfaces.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="px-4 py-10 text-center text-slate-500">
+                                        조회된 인터페이스가 없습니다.
+                                    </td>
+                                </tr>
+                            ) : (
+                                interfaces.map((item) => (
+                                    <tr key={item.id} className="transition hover:bg-slate-50">
+                                        <td className="px-4 py-4">
+                                            <p className="font-semibold">{item.name}</p>
+                                            <p className="mt-1 text-xs text-slate-500">{item.ownerTeam}</p>
+                                        </td>
+                                        <td className="px-4 py-4 text-slate-700">{item.organization}</td>
+                                        <td className="px-4 py-4">
+                                            <ProtocolBadge protocol={item.protocol} />
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <StatusBadge status={item.status} />
+                                        </td>
+                                        <td className="px-4 py-4 text-slate-500">
+                                            {item.lastExecutedAt ?? "-"}
+                                        </td>
+                                        <td className="px-4 py-4 font-medium">{item.avgResponseMs}ms</td>
+                                        <td className="px-4 py-4">
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    onClick={() => openDetail(item)}
+                                                    className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold transition hover:bg-slate-100"
+                                                >
+                                                    상세
+                                                </button>
+                                                <button
+                                                    onClick={() => openEditForm(item)}
+                                                    className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold transition hover:bg-slate-100"
+                                                >
+                                                    수정
+                                                </button>
+                                                <button
+                                                    onClick={() => handleRetry(item.id)}
+                                                    className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700"
+                                                >
+                                                    재실행
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                             </tbody>
                         </table>
                     </div>
@@ -191,23 +340,29 @@ export default function DashboardPage() {
                         </p>
 
                         <div className="mt-5 space-y-3">
-                            {interfaces
-                                .filter((item) => item.status === "FAILED")
-                                .map((item) => (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => setSelected(item)}
-                                        className="w-full rounded-2xl border border-red-100 bg-red-50 p-4 text-left transition hover:bg-red-100"
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <p className="font-semibold text-red-800">{item.name}</p>
-                                            <span className="text-xs font-bold text-red-600">확인 필요</span>
-                                        </div>
-                                        <p className="mt-1 text-sm text-red-700">
-                                            {item.organization} · {item.lastExecutedAt}
-                                        </p>
-                                    </button>
-                                ))}
+                            {interfaces.filter((item) => item.status === "FAILED").length === 0 ? (
+                                <div className="rounded-2xl border border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
+                                    확인 필요한 실패 인터페이스가 없습니다.
+                                </div>
+                            ) : (
+                                interfaces
+                                    .filter((item) => item.status === "FAILED")
+                                    .map((item) => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => openDetail(item)}
+                                            className="w-full rounded-2xl border border-red-100 bg-red-50 p-4 text-left transition hover:bg-red-100"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <p className="font-semibold text-red-800">{item.name}</p>
+                                                <span className="text-xs font-bold text-red-600">확인 필요</span>
+                                            </div>
+                                            <p className="mt-1 text-sm text-red-700">
+                                                {item.organization} · {item.lastExecutedAt ?? "-"}
+                                            </p>
+                                        </button>
+                                    ))
+                            )}
                         </div>
                     </div>
                 </section>
@@ -216,8 +371,20 @@ export default function DashboardPage() {
             {selected && (
                 <DetailModal
                     item={selected}
+                    logs={recentLogs}
                     onClose={() => setSelected(null)}
-                    onRetry={() => retryInterface(selected.id)}
+                    onRetry={() => handleRetry(selected.id)}
+                />
+            )}
+
+            {isFormOpen && (
+                <InterfaceFormModal
+                    title={editingItem ? "인터페이스 수정" : "인터페이스 등록"}
+                    form={form}
+                    organizations={organizations}
+                    onChange={setForm}
+                    onClose={() => setIsFormOpen(false)}
+                    onSubmit={submitForm}
                 />
             )}
         </>
@@ -247,15 +414,15 @@ function MetricCard({
 
 function DetailModal({
                          item,
+                         logs,
                          onClose,
                          onRetry,
                      }: {
     item: InterfaceItem;
+    logs: ExecutionLog[];
     onClose: () => void;
     onRetry: () => void;
 }) {
-    const logs = initialLogs.filter((log) => log.interfaceId === item.id);
-
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4">
             <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
@@ -284,7 +451,9 @@ function DetailModal({
                 <div className="space-y-6 px-7 py-6">
                     <div className="rounded-2xl bg-slate-50 p-5">
                         <p className="text-sm font-semibold text-slate-700">설명</p>
-                        <p className="mt-2 text-sm text-slate-600">{item.description}</p>
+                        <p className="mt-2 text-sm text-slate-600">
+                            {item.description || "등록된 설명이 없습니다."}
+                        </p>
                     </div>
 
                     <div className="rounded-2xl border border-slate-200 p-5">
@@ -310,7 +479,7 @@ function DetailModal({
 
                         {logs.length === 0 ? (
                             <div className="rounded-2xl border border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
-                                최근 실패 로그가 없습니다.
+                                최근 실행 로그가 없습니다.
                             </div>
                         ) : (
                             <div className="space-y-4">
@@ -320,7 +489,7 @@ function DetailModal({
                                             <div>
                                                 <p className="font-semibold">{log.executedAt}</p>
                                                 <p className="mt-1 text-sm text-slate-500">
-                                                    응답시간 {log.responseTimeMs}ms
+                                                    응답시간 {log.responseTimeMs}ms · 재시도 {log.retryCount}회
                                                 </p>
                                             </div>
                                             <StatusBadge status={log.status} />
@@ -332,9 +501,16 @@ function DetailModal({
                                             </div>
                                         )}
 
+                                        {(log.failureReason || log.suggestedAction) && (
+                                            <div className="mb-4 grid gap-3 md:grid-cols-2">
+                                                <InfoBox title="실패 원인" value={log.failureReason ?? "-"} />
+                                                <InfoBox title="조치 방안" value={log.suggestedAction ?? "-"} />
+                                            </div>
+                                        )}
+
                                         <div className="grid gap-4 md:grid-cols-2">
-                                            <PayloadBox title="Request Payload" value={log.requestPayload} />
-                                            <PayloadBox title="Response Payload" value={log.responsePayload} />
+                                            <PayloadBox title="Request Payload" value={log.requestPayload ?? "-"} />
+                                            <PayloadBox title="Response Payload" value={log.responsePayload ?? "-"} />
                                         </div>
                                     </div>
                                 ))}
@@ -347,13 +523,161 @@ function DetailModal({
     );
 }
 
+function InterfaceFormModal({
+                                title,
+                                form,
+                                organizations,
+                                onChange,
+                                onClose,
+                                onSubmit,
+                            }: {
+    title: string;
+    form: CreateInterfaceRequest;
+    organizations: Organization[];
+    onChange: (form: CreateInterfaceRequest) => void;
+    onClose: () => void;
+    onSubmit: () => void;
+}) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4">
+            <div className="w-full max-w-2xl rounded-3xl bg-white p-7 shadow-2xl">
+                <div className="flex items-start justify-between">
+                    <div>
+                        <h3 className="text-xl font-bold">{title}</h3>
+                        <p className="mt-1 text-sm text-slate-500">
+                            외부 기관과 연계할 인터페이스 정보를 입력합니다.
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={onClose}
+                        className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50"
+                    >
+                        닫기
+                    </button>
+                </div>
+
+                <div className="mt-6 grid gap-4 md:grid-cols-2">
+                    <FormField label="외부 기관">
+                        <select
+                            value={form.organizationId}
+                            onChange={(e) =>
+                                onChange({ ...form, organizationId: Number(e.target.value) })
+                            }
+                            className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
+                        >
+                            <option value={0}>기관 선택</option>
+                            {organizations.map((organization) => (
+                                <option key={organization.id} value={organization.id}>
+                                    {organization.name}
+                                </option>
+                            ))}
+                        </select>
+                    </FormField>
+
+                    <FormField label="프로토콜">
+                        <select
+                            value={form.protocolType}
+                            onChange={(e) =>
+                                onChange({ ...form, protocolType: e.target.value as Protocol })
+                            }
+                            className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
+                        >
+                            <option value="REST">REST</option>
+                            <option value="SOAP">SOAP</option>
+                            <option value="SFTP">SFTP</option>
+                            <option value="MQ">MQ</option>
+                            <option value="BATCH">BATCH</option>
+                        </select>
+                    </FormField>
+
+                    <FormField label="인터페이스명">
+                        <input
+                            value={form.name}
+                            onChange={(e) => onChange({ ...form, name: e.target.value })}
+                            className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
+                        />
+                    </FormField>
+
+                    <FormField label="담당팀">
+                        <input
+                            value={form.ownerTeam}
+                            onChange={(e) => onChange({ ...form, ownerTeam: e.target.value })}
+                            className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
+                        />
+                    </FormField>
+
+                    <div className="md:col-span-2">
+                        <FormField label="엔드포인트">
+                            <input
+                                value={form.endpoint}
+                                onChange={(e) => onChange({ ...form, endpoint: e.target.value })}
+                                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
+                            />
+                        </FormField>
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <FormField label="설명">
+                            <textarea
+                                value={form.description}
+                                onChange={(e) => onChange({ ...form, description: e.target.value })}
+                                className="min-h-28 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm"
+                            />
+                        </FormField>
+                    </div>
+                </div>
+
+                <div className="mt-6 flex justify-end gap-2">
+                    <button
+                        onClick={onClose}
+                        className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold transition hover:bg-slate-50"
+                    >
+                        취소
+                    </button>
+                    <button
+                        onClick={onSubmit}
+                        className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
+                    >
+                        저장
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function FormField({
+                       label,
+                       children,
+                   }: {
+    label: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <label className="block">
+            <span className="mb-2 block text-sm font-bold text-slate-700">{label}</span>
+            {children}
+        </label>
+    );
+}
+
+function InfoBox({ title, value }: { title: string; value: string }) {
+    return (
+        <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm">
+            <p className="font-bold text-slate-700">{title}</p>
+            <p className="mt-1 text-slate-600">{value}</p>
+        </div>
+    );
+}
+
 function PayloadBox({ title, value }: { title: string; value: string }) {
     return (
         <div>
             <p className="mb-2 text-xs font-bold text-slate-500">{title}</p>
             <pre className="max-h-56 overflow-auto rounded-2xl bg-slate-950 p-4 text-xs leading-relaxed text-slate-100">
-        {value}
-      </pre>
+                {value}
+            </pre>
         </div>
     );
 }
