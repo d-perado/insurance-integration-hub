@@ -15,6 +15,7 @@ public enum ServiceErrorCode {
 
     // Organization
     ORGANIZATION_NOT_FOUND(HttpStatus.NOT_FOUND, "ORG_001", "외부 기관 정보를 찾을 수 없습니다."),
+    ORGANIZATION_NAME_DUPLICATED(HttpStatus.BAD_REQUEST, "ORG_002", "이미 등록된 기관명입니다."),
 
     // Interface
     INTERFACE_NOT_FOUND(HttpStatus.NOT_FOUND, "INTERFACE_001", "인터페이스 정보를 찾을 수 없습니다."),
