@@ -3,8 +3,10 @@ package com.insurance.integrationhub.service;
 import com.insurance.integrationhub.common.exception.ServiceErrorCode;
 import com.insurance.integrationhub.common.exception.ServiceException;
 import com.insurance.integrationhub.domain.*;
+import com.insurance.integrationhub.dto.interfaces.CreateInterfaceSystemRequest;
 import com.insurance.integrationhub.dto.interfaces.InterfaceDetailResponse;
 import com.insurance.integrationhub.dto.interfaces.InterfaceResponse;
+import com.insurance.integrationhub.dto.interfaces.UpdateInterfaceSystemRequest;
 import com.insurance.integrationhub.repository.ExecutionLogRepository;
 import com.insurance.integrationhub.repository.ExternalOrganizationRepository;
 import com.insurance.integrationhub.repository.InterfaceSystemRepository;
@@ -16,7 +18,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 class InterfaceSystemServiceTest {
@@ -131,6 +134,81 @@ class InterfaceSystemServiceTest {
     }
 
     @Test
+    @DisplayName("중복된 인터페이스명으로 등록 시 예외가 발생한다")
+    void createInterfaceSystem_duplicateName() {
+        CreateInterfaceSystemRequest request = createInterfaceRequest();
+
+        when(interfaceSystemRepository.existsByName(request.name()))
+                .thenReturn(true);
+
+        assertThatThrownBy(() ->
+                interfaceSystemService.createInterfaceSystem(request)
+        )
+                .isInstanceOf(ServiceException.class)
+                .hasMessage(ServiceErrorCode.INTERFACE_NAME_DUPLICATED.getMessage());
+
+        verify(interfaceSystemRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("중복된 인터페이스명으로 수정 시 예외가 발생한다")
+    void updateInterfaceSystem_duplicateName() {
+        InterfaceSystem interfaceSystem = createInterfaceSystem();
+
+        UpdateInterfaceSystemRequest request = new UpdateInterfaceSystemRequest(
+                1L,
+                "계약 상태 변경 송신",
+                ProtocolType.SFTP,
+                "고객관리팀",
+                "sftp://shinhan.com/contract-status",
+                "계약 상태 변경 정보를 외부 기관으로 송신"
+        );
+
+        when(interfaceSystemRepository.findById(1L))
+                .thenReturn(Optional.of(interfaceSystem));
+
+        when(interfaceSystemRepository.existsByName("계약 상태 변경 송신"))
+                .thenReturn(true);
+
+        assertThatThrownBy(() ->
+                interfaceSystemService.updateInterfaceSystem(1L, request)
+        )
+                .isInstanceOf(ServiceException.class)
+                .hasMessage(ServiceErrorCode.INTERFACE_NAME_DUPLICATED.getMessage());
+    }
+
+    @Test
+    @DisplayName("기존 인터페이스명과 동일한 이름으로 수정할 수 있다")
+    void updateInterfaceSystem_sameName() {
+        InterfaceSystem interfaceSystem = createInterfaceSystem();
+        ExternalOrganization organization = createOrganization();
+
+        UpdateInterfaceSystemRequest request = new UpdateInterfaceSystemRequest(
+                1L,
+                "보험료 납입 결과 수신",
+                ProtocolType.REST,
+                "계약운영팀",
+                "https://api.kb.com/payment-result-v2",
+                "보험료 납입 결과 수신 endpoint 수정"
+        );
+
+        when(interfaceSystemRepository.findById(1L))
+                .thenReturn(Optional.of(interfaceSystem));
+
+        when(externalOrganizationRepository.findById(1L))
+                .thenReturn(Optional.of(organization));
+
+        InterfaceResponse result =
+                interfaceSystemService.updateInterfaceSystem(1L, request);
+
+        assertThat(result.name()).isEqualTo("보험료 납입 결과 수신");
+        assertThat(result.endpoint()).isEqualTo("https://api.kb.com/payment-result-v2");
+
+        verify(interfaceSystemRepository, never())
+                .existsByName("보험료 납입 결과 수신");
+    }
+
+    @Test
     @DisplayName("FAILED 상태의 인터페이스는 재실행할 수 있다")
     void retryInterface() {
         ExternalOrganization organization = new ExternalOrganization(
@@ -198,5 +276,39 @@ class InterfaceSystemServiceTest {
                 .hasMessage(ServiceErrorCode.RETRY_NOT_ALLOWED.getMessage());
 
         verify(executionLogRepository, never()).save(any());
+    }
+
+    private ExternalOrganization createOrganization() {
+        return new ExternalOrganization(
+                "국민은행",
+                "홍길동",
+                "manager@kb.com"
+        );
+    }
+
+    private InterfaceSystem createInterfaceSystem() {
+        return new InterfaceSystem(
+                createOrganization(),
+                "보험료 납입 결과 수신",
+                ProtocolType.REST,
+                InterfaceStatus.FAILED,
+                "계약운영팀",
+                "https://api.kb.com/payment-result",
+                "보험료 납입 결과 수신",
+                LocalDateTime.now(),
+                3000,
+                10
+        );
+    }
+
+    private CreateInterfaceSystemRequest createInterfaceRequest() {
+        return new CreateInterfaceSystemRequest(
+                1L,
+                "보험료 납입 결과 수신",
+                ProtocolType.REST,
+                "계약운영팀",
+                "https://api.kb.com/payment-result",
+                "보험료 납입 결과를 외부 기관으로부터 수신"
+        );
     }
 }
