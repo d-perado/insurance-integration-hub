@@ -22,8 +22,10 @@ export default function OrganizationPage() {
     const [errorMessage, setErrorMessage] = useState("");
 
     const [isFormOpen, setIsFormOpen] = useState(false);
-    const [editingOrganization, setEditingOrganization] = useState<Organization | null>(null);
-    const [form, setForm] = useState<CreateOrganizationRequest>(emptyForm);
+    const [editingOrganization, setEditingOrganization] =
+        useState<Organization | null>(null);
+    const [form, setForm] =
+        useState<CreateOrganizationRequest>(emptyForm);
 
     const loadOrganizations = async () => {
         setIsLoading(true);
@@ -34,7 +36,9 @@ export default function OrganizationPage() {
             setOrganizations(data);
         } catch (error) {
             setErrorMessage(
-                error instanceof Error ? error.message : "기관 목록 조회 중 오류가 발생했습니다."
+                error instanceof Error
+                    ? error.message
+                    : "기관 목록 조회 중 오류가 발생했습니다."
             );
         } finally {
             setIsLoading(false);
@@ -53,11 +57,13 @@ export default function OrganizationPage() {
 
     const openEditForm = (organization: Organization) => {
         setEditingOrganization(organization);
+
         setForm({
             name: organization.name,
             managerName: organization.managerName,
             managerEmail: organization.managerEmail,
         });
+
         setIsFormOpen(true);
     };
 
@@ -72,27 +78,32 @@ export default function OrganizationPage() {
             setIsFormOpen(false);
             setEditingOrganization(null);
             setForm(emptyForm);
+
             await loadOrganizations();
         } catch (error) {
             setErrorMessage(
-                error instanceof Error ? error.message : "기관 저장 중 오류가 발생했습니다."
+                error instanceof Error
+                    ? error.message
+                    : "기관 저장 중 오류가 발생했습니다."
             );
         }
     };
 
     const handleDelete = async (organizationId: number) => {
-        const confirmed = window.confirm("외부 기관을 삭제하시겠습니까?");
+        const confirmed = window.confirm(
+            "외부 기관을 삭제하시겠습니까?"
+        );
 
-        if (!confirmed) {
-            return;
-        }
+        if (!confirmed) return;
 
         try {
             await deleteOrganization(organizationId);
             await loadOrganizations();
         } catch (error) {
             setErrorMessage(
-                error instanceof Error ? error.message : "기관 삭제 중 오류가 발생했습니다."
+                error instanceof Error
+                    ? error.message
+                    : "기관 삭제 중 오류가 발생했습니다."
             );
         }
     };
@@ -100,9 +111,12 @@ export default function OrganizationPage() {
     return (
         <>
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
                     <div>
-                        <h3 className="text-lg font-bold">기관 관리</h3>
+                        <h3 className="text-lg font-bold">
+                            기관 관리
+                        </h3>
+
                         <p className="mt-1 text-sm text-slate-500">
                             외부 기관의 담당자 정보를 등록하고 관리합니다.
                         </p>
@@ -122,52 +136,88 @@ export default function OrganizationPage() {
                     </div>
                 )}
 
-                <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200">
-                    <table className="w-full text-sm">
+                <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-200">
+                    <table className="min-w-[900px] w-full text-sm">
                         <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                         <tr>
-                            <th className="px-4 py-3">기관명</th>
-                            <th className="px-4 py-3">담당자</th>
-                            <th className="px-4 py-3">이메일</th>
-                            <th className="px-4 py-3">등록일시</th>
-                            <th className="px-4 py-3 text-right">작업</th>
+                            <th className="px-4 py-3">
+                                기관명
+                            </th>
+                            <th className="px-4 py-3">
+                                담당자
+                            </th>
+                            <th className="px-4 py-3">
+                                이메일
+                            </th>
+                            <th className="px-4 py-3">
+                                등록일시
+                            </th>
+                            <th className="px-4 py-3 text-right">
+                                작업
+                            </th>
                         </tr>
                         </thead>
 
                         <tbody className="divide-y divide-slate-100">
                         {isLoading ? (
                             <tr>
-                                <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
+                                <td
+                                    colSpan={5}
+                                    className="px-4 py-10 text-center text-slate-500"
+                                >
                                     데이터를 불러오는 중입니다.
                                 </td>
                             </tr>
                         ) : organizations.length === 0 ? (
                             <tr>
-                                <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
+                                <td
+                                    colSpan={5}
+                                    className="px-4 py-10 text-center text-slate-500"
+                                >
                                     등록된 외부 기관이 없습니다.
                                 </td>
                             </tr>
                         ) : (
                             organizations.map((organization) => (
-                                <tr key={organization.id} className="hover:bg-slate-50">
-                                    <td className="px-4 py-4 font-semibold">{organization.name}</td>
-                                    <td className="px-4 py-4">{organization.managerName}</td>
+                                <tr
+                                    key={organization.id}
+                                    className="hover:bg-slate-50"
+                                >
+                                    <td className="px-4 py-4 font-semibold">
+                                        {organization.name}
+                                    </td>
+
+                                    <td className="px-4 py-4">
+                                        {organization.managerName}
+                                    </td>
+
                                     <td className="px-4 py-4 text-slate-600">
                                         {organization.managerEmail}
                                     </td>
+
                                     <td className="px-4 py-4 text-slate-500">
                                         {organization.createdAt}
                                     </td>
+
                                     <td className="px-4 py-4">
                                         <div className="flex justify-end gap-2">
                                             <button
-                                                onClick={() => openEditForm(organization)}
+                                                onClick={() =>
+                                                    openEditForm(
+                                                        organization
+                                                    )
+                                                }
                                                 className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold transition hover:bg-slate-100"
                                             >
                                                 수정
                                             </button>
+
                                             <button
-                                                onClick={() => handleDelete(organization.id)}
+                                                onClick={() =>
+                                                    handleDelete(
+                                                        organization.id
+                                                    )
+                                                }
                                                 className="rounded-xl bg-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-700"
                                             >
                                                 삭제
@@ -184,7 +234,11 @@ export default function OrganizationPage() {
 
             {isFormOpen && (
                 <OrganizationFormModal
-                    title={editingOrganization ? "기관 수정" : "기관 등록"}
+                    title={
+                        editingOrganization
+                            ? "기관 수정"
+                            : "기관 등록"
+                    }
                     form={form}
                     onChange={setForm}
                     onClose={() => setIsFormOpen(false)}
@@ -213,7 +267,10 @@ function OrganizationFormModal({
             <div className="w-full max-w-xl rounded-3xl bg-white p-7 shadow-2xl">
                 <div className="flex items-start justify-between">
                     <div>
-                        <h3 className="text-xl font-bold">{title}</h3>
+                        <h3 className="text-xl font-bold">
+                            {title}
+                        </h3>
+
                         <p className="mt-1 text-sm text-slate-500">
                             외부 기관과 담당자 정보를 입력합니다.
                         </p>
@@ -231,7 +288,12 @@ function OrganizationFormModal({
                     <FormField label="기관명">
                         <input
                             value={form.name}
-                            onChange={(e) => onChange({ ...form, name: e.target.value })}
+                            onChange={(e) =>
+                                onChange({
+                                    ...form,
+                                    name: e.target.value,
+                                })
+                            }
                             className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
                         />
                     </FormField>
@@ -239,7 +301,13 @@ function OrganizationFormModal({
                     <FormField label="담당자명">
                         <input
                             value={form.managerName}
-                            onChange={(e) => onChange({ ...form, managerName: e.target.value })}
+                            onChange={(e) =>
+                                onChange({
+                                    ...form,
+                                    managerName:
+                                    e.target.value,
+                                })
+                            }
                             className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
                         />
                     </FormField>
@@ -247,7 +315,13 @@ function OrganizationFormModal({
                     <FormField label="담당자 이메일">
                         <input
                             value={form.managerEmail}
-                            onChange={(e) => onChange({ ...form, managerEmail: e.target.value })}
+                            onChange={(e) =>
+                                onChange({
+                                    ...form,
+                                    managerEmail:
+                                    e.target.value,
+                                })
+                            }
                             className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
                         />
                     </FormField>
@@ -260,6 +334,7 @@ function OrganizationFormModal({
                     >
                         취소
                     </button>
+
                     <button
                         onClick={onSubmit}
                         className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
@@ -281,7 +356,10 @@ function FormField({
 }) {
     return (
         <label className="block">
-            <span className="mb-2 block text-sm font-bold text-slate-700">{label}</span>
+            <span className="mb-2 block text-sm font-bold text-slate-700">
+                {label}
+            </span>
+
             {children}
         </label>
     );

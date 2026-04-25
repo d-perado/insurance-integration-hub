@@ -1,22 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import type {
-    CreateInterfaceRequest,
-    ExecutionLog,
-    InterfaceItem,
-    Protocol,
-    Status,
-} from "../types/interface";
-import type { Organization } from "../types/organization";
+import {useEffect, useMemo, useState} from "react";
+import type {CreateInterfaceRequest, ExecutionLog, InterfaceItem, Protocol, Status,} from "../types/interface";
+import type {Organization} from "../types/organization";
 import ProtocolBadge from "../components/ui/ProtocolBadge";
 import StatusBadge from "../components/ui/StatusBadge";
-import {
-    createInterface,
-    getInterface,
-    getInterfaces,
-    retryInterface,
-    updateInterface,
-} from "../api/interfaceApi";
-import { getOrganizations } from "../api/organizationApi";
+import {createInterface, getInterface, getInterfaces, retryInterface, updateInterface,} from "../api/interfaceApi";
+import {getOrganizations} from "../api/organizationApi";
 
 const emptyForm: CreateInterfaceRequest = {
     organizationId: 0,
@@ -181,22 +169,24 @@ export default function DashboardPage() {
     return (
         <>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-                <MetricCard title="전체 인터페이스" value={`${summary.total}개`} />
-                <MetricCard title="성공률" value={`${summary.successRate}%`} accent />
-                <MetricCard title="실패" value={`${summary.failed}건`} danger />
-                <MetricCard title="대기" value={`${summary.pending}건`} />
-                <MetricCard title="평균 응답시간" value={`${summary.avgResponse}ms`} />
+                <MetricCard title="전체 인터페이스" value={`${summary.total}개`}/>
+                <MetricCard title="성공률" value={`${summary.successRate}%`} accent/>
+                <MetricCard title="실패" value={`${summary.failed}건`} danger/>
+                <MetricCard title="대기" value={`${summary.pending}건`}/>
+                <MetricCard title="평균 응답시간" value={`${summary.avgResponse}ms`}/>
             </div>
 
             {errorMessage && (
-                <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
+                <div
+                    className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
                     {errorMessage}
                 </div>
             )}
 
             <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_360px]">
                 <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 xl:flex-row xl:items-center xl:justify-between">
+                    <div
+                        className="flex flex-col gap-4 border-b border-slate-100 pb-5 2xl:flex-row 2xl:items-center 2xl:justify-between">
                         <div>
                             <h3 className="text-lg font-bold">인터페이스 목록</h3>
                             <p className="mt-1 text-sm text-slate-500">
@@ -204,7 +194,7 @@ export default function DashboardPage() {
                             </p>
                         </div>
 
-                        <div className="flex flex-col gap-2 md:flex-row">
+                        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3 2xl:flex 2xl:flex-row">
                             <input
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
@@ -214,7 +204,7 @@ export default function DashboardPage() {
                                     }
                                 }}
                                 placeholder="기관명, 인터페이스명, 담당팀 검색"
-                                className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none transition focus:border-blue-500 focus:bg-white md:w-72"
+                                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none transition focus:border-blue-500 focus:bg-white 2xl:w-72"
                             />
 
                             <select
@@ -257,9 +247,10 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
-                        <table className="w-full border-collapse text-sm">
-                            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
+                        <table className="min-w-[900px] w-full border-collapse text-sm">
+                            <thead
+                                className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                             <tr>
                                 <th className="px-4 py-3">인터페이스</th>
                                 <th className="px-4 py-3">기관</th>
@@ -293,10 +284,10 @@ export default function DashboardPage() {
                                         </td>
                                         <td className="px-4 py-4 text-slate-700">{item.organization}</td>
                                         <td className="px-4 py-4">
-                                            <ProtocolBadge protocol={item.protocol} />
+                                            <ProtocolBadge protocol={item.protocol}/>
                                         </td>
                                         <td className="px-4 py-4">
-                                            <StatusBadge status={item.status} />
+                                            <StatusBadge status={item.status}/>
                                         </td>
                                         <td className="px-4 py-4 text-slate-500">
                                             {item.lastExecutedAt ?? "-"}
@@ -341,7 +332,8 @@ export default function DashboardPage() {
 
                         <div className="mt-5 space-y-3">
                             {interfaces.filter((item) => item.status === "FAILED").length === 0 ? (
-                                <div className="rounded-2xl border border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
+                                <div
+                                    className="rounded-2xl border border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
                                     확인 필요한 실패 인터페이스가 없습니다.
                                 </div>
                             ) : (
@@ -430,8 +422,8 @@ function DetailModal({
                     <div className="flex items-start justify-between gap-5">
                         <div>
                             <div className="mb-3 flex items-center gap-2">
-                                <StatusBadge status={item.status} />
-                                <ProtocolBadge protocol={item.protocol} />
+                                <StatusBadge status={item.status}/>
+                                <ProtocolBadge protocol={item.protocol}/>
                             </div>
                             <h3 className="text-2xl font-bold">{item.name}</h3>
                             <p className="mt-2 text-sm text-slate-500">
@@ -478,7 +470,8 @@ function DetailModal({
                         <h4 className="mb-4 font-bold">최근 실행 로그</h4>
 
                         {logs.length === 0 ? (
-                            <div className="rounded-2xl border border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+                            <div
+                                className="rounded-2xl border border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
                                 최근 실행 로그가 없습니다.
                             </div>
                         ) : (
@@ -492,25 +485,26 @@ function DetailModal({
                                                     응답시간 {log.responseTimeMs}ms · 재시도 {log.retryCount}회
                                                 </p>
                                             </div>
-                                            <StatusBadge status={log.status} />
+                                            <StatusBadge status={log.status}/>
                                         </div>
 
                                         {log.errorMessage && (
-                                            <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                                            <div
+                                                className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
                                                 {log.errorMessage}
                                             </div>
                                         )}
 
                                         {(log.failureReason || log.suggestedAction) && (
                                             <div className="mb-4 grid gap-3 md:grid-cols-2">
-                                                <InfoBox title="실패 원인" value={log.failureReason ?? "-"} />
-                                                <InfoBox title="조치 방안" value={log.suggestedAction ?? "-"} />
+                                                <InfoBox title="실패 원인" value={log.failureReason ?? "-"}/>
+                                                <InfoBox title="조치 방안" value={log.suggestedAction ?? "-"}/>
                                             </div>
                                         )}
 
                                         <div className="grid gap-4 md:grid-cols-2">
-                                            <PayloadBox title="Request Payload" value={log.requestPayload ?? "-"} />
-                                            <PayloadBox title="Response Payload" value={log.responsePayload ?? "-"} />
+                                            <PayloadBox title="Request Payload" value={log.requestPayload ?? "-"}/>
+                                            <PayloadBox title="Response Payload" value={log.responsePayload ?? "-"}/>
                                         </div>
                                     </div>
                                 ))}
@@ -562,7 +556,7 @@ function InterfaceFormModal({
                         <select
                             value={form.organizationId}
                             onChange={(e) =>
-                                onChange({ ...form, organizationId: Number(e.target.value) })
+                                onChange({...form, organizationId: Number(e.target.value)})
                             }
                             className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
                         >
@@ -579,7 +573,7 @@ function InterfaceFormModal({
                         <select
                             value={form.protocolType}
                             onChange={(e) =>
-                                onChange({ ...form, protocolType: e.target.value as Protocol })
+                                onChange({...form, protocolType: e.target.value as Protocol})
                             }
                             className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
                         >
@@ -594,7 +588,7 @@ function InterfaceFormModal({
                     <FormField label="인터페이스명">
                         <input
                             value={form.name}
-                            onChange={(e) => onChange({ ...form, name: e.target.value })}
+                            onChange={(e) => onChange({...form, name: e.target.value})}
                             className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
                         />
                     </FormField>
@@ -602,7 +596,7 @@ function InterfaceFormModal({
                     <FormField label="담당팀">
                         <input
                             value={form.ownerTeam}
-                            onChange={(e) => onChange({ ...form, ownerTeam: e.target.value })}
+                            onChange={(e) => onChange({...form, ownerTeam: e.target.value})}
                             className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
                         />
                     </FormField>
@@ -611,7 +605,7 @@ function InterfaceFormModal({
                         <FormField label="엔드포인트">
                             <input
                                 value={form.endpoint}
-                                onChange={(e) => onChange({ ...form, endpoint: e.target.value })}
+                                onChange={(e) => onChange({...form, endpoint: e.target.value})}
                                 className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
                             />
                         </FormField>
@@ -621,7 +615,7 @@ function InterfaceFormModal({
                         <FormField label="설명">
                             <textarea
                                 value={form.description}
-                                onChange={(e) => onChange({ ...form, description: e.target.value })}
+                                onChange={(e) => onChange({...form, description: e.target.value})}
                                 className="min-h-28 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm"
                             />
                         </FormField>
@@ -662,7 +656,7 @@ function FormField({
     );
 }
 
-function InfoBox({ title, value }: { title: string; value: string }) {
+function InfoBox({title, value}: { title: string; value: string }) {
     return (
         <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm">
             <p className="font-bold text-slate-700">{title}</p>
@@ -671,7 +665,7 @@ function InfoBox({ title, value }: { title: string; value: string }) {
     );
 }
 
-function PayloadBox({ title, value }: { title: string; value: string }) {
+function PayloadBox({title, value}: { title: string; value: string }) {
     return (
         <div>
             <p className="mb-2 text-xs font-bold text-slate-500">{title}</p>
