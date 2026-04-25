@@ -30,6 +30,8 @@ public class InterfaceSystemService {
 
     @Transactional
     public InterfaceResponse createInterfaceSystem(CreateInterfaceSystemRequest request) {
+        validateDuplicateName(request.name());
+
         ExternalOrganization organization = externalOrganizationRepository.findById(request.organizationId())
                 .orElseThrow(() -> new ServiceException(ServiceErrorCode.ORGANIZATION_NOT_FOUND));
 
@@ -93,6 +95,10 @@ public class InterfaceSystemService {
         InterfaceSystem interfaceSystem = interfaceSystemRepository.findById(interfaceId)
                 .orElseThrow(() -> new ServiceException(ServiceErrorCode.INTERFACE_NOT_FOUND));
 
+        if (!interfaceSystem.getName().equals(request.name())) {
+            validateDuplicateName(request.name());
+        }
+
         ExternalOrganization organization = externalOrganizationRepository.findById(request.organizationId())
                 .orElseThrow(() -> new ServiceException(ServiceErrorCode.ORGANIZATION_NOT_FOUND));
 
@@ -106,6 +112,12 @@ public class InterfaceSystemService {
         );
 
         return InterfaceResponse.from(interfaceSystem);
+    }
+
+    private void validateDuplicateName(String name) {
+        if (interfaceSystemRepository.existsByName(name)) {
+            throw new ServiceException(ServiceErrorCode.INTERFACE_NAME_DUPLICATED);
+        }
     }
 
     @Transactional

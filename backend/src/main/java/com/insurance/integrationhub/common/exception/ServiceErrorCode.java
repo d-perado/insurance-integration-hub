@@ -22,6 +22,7 @@ public enum ServiceErrorCode {
     INVALID_INTERFACE_STATUS(HttpStatus.BAD_REQUEST, "INTERFACE_002", "유효하지 않은 인터페이스 상태입니다."),
     INTERFACE_ALREADY_RUNNING(HttpStatus.CONFLICT, "INTERFACE_003", "이미 실행 중인 인터페이스입니다."),
     RETRY_NOT_ALLOWED(HttpStatus.CONFLICT, "INTERFACE_004", "실패 상태의 인터페이스만 재실행할 수 있습니다."),
+    INTERFACE_NAME_DUPLICATED(HttpStatus.BAD_REQUEST, "INTERFACE_005", "이미 등록된 인터페이스명입니다."),
 
     // Log
     LOG_NOT_FOUND(HttpStatus.NOT_FOUND, "LOG_001", "실행 로그를 찾을 수 없습니다.");
