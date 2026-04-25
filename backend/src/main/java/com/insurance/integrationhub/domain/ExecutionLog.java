@@ -2,6 +2,7 @@ package com.insurance.integrationhub.domain;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -62,6 +63,7 @@ public class ExecutionLog {
     @Column(name = "retry_count", nullable = false)
     private Integer retryCount;
 
+    @Builder
     public ExecutionLog(
             InterfaceSystem interfaceSystem,
             LocalDateTime executedAt,
@@ -86,5 +88,24 @@ public class ExecutionLog {
         this.failureReason = failureReason;
         this.suggestedAction = suggestedAction;
         this.retryCount = retryCount;
+    }
+
+    public static ExecutionLog pendingTimeout(
+            InterfaceSystem interfaceSystem,
+            LocalDateTime executedAt
+    ) {
+        return ExecutionLog.builder()
+                .interfaceSystem(interfaceSystem)
+                .executedAt(executedAt)
+                .status(InterfaceStatus.FAILED)
+                .responseTimeMs(0)
+                .requestPayload(null)
+                .responsePayload(null)
+                .errorMessage("장시간 PENDING 상태가 지속되어 자동 실패 처리되었습니다.")
+                .failureType(FailureType.TIMEOUT)
+                .failureReason("30분 이상 대기 상태가 지속되었습니다.")
+                .suggestedAction("외부 기관 응답 상태 및 배치 처리 여부를 확인하세요.")
+                .retryCount(0)
+                .build();
     }
 }
