@@ -22,7 +22,7 @@ public class ExternalOrganization {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String name;
 
     private String managerName;
@@ -37,5 +37,11 @@ public class ExternalOrganization {
         this.managerName = managerName;
         this.managerEmail = managerEmail;
         this.createdAt = LocalDateTime.now();
+    }
+
+    public void update(String name, String managerName, String managerEmail) {
+        this.name = name;
+        this.managerName = managerName;
+        this.managerEmail = managerEmail;
     }
 }
