@@ -24,7 +24,6 @@ public class InterfaceSystem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 단방향 ManyToOne
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "external_organization_id", nullable = false)
     private ExternalOrganization externalOrganization;
@@ -55,6 +54,9 @@ public class InterfaceSystem {
 
     private Integer todayCount;
 
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
+
     public InterfaceSystem(
             ExternalOrganization externalOrganization,
             String name,
@@ -77,6 +79,7 @@ public class InterfaceSystem {
         this.lastExecutedAt = lastExecutedAt;
         this.avgResponseMs = avgResponseMs;
         this.todayCount = todayCount;
+        this.createdAt = LocalDateTime.now();
     }
 
     public void updateStatus(InterfaceStatus status) {
@@ -87,5 +90,21 @@ public class InterfaceSystem {
     public void updateMetrics(Integer responseTimeMs) {
         this.avgResponseMs = responseTimeMs;
         this.todayCount = this.todayCount == null ? 1 : this.todayCount + 1;
+    }
+
+    public void update(
+            ExternalOrganization externalOrganization,
+            String name,
+            ProtocolType protocolType,
+            String ownerTeam,
+            String endpoint,
+            String description
+    ) {
+        this.externalOrganization = externalOrganization;
+        this.name = name;
+        this.protocolType = protocolType;
+        this.ownerTeam = ownerTeam;
+        this.endpoint = endpoint;
+        this.description = description;
     }
 }

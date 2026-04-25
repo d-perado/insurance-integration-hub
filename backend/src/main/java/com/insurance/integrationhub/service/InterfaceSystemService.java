@@ -2,15 +2,14 @@ package com.insurance.integrationhub.service;
 
 import com.insurance.integrationhub.common.exception.ServiceErrorCode;
 import com.insurance.integrationhub.common.exception.ServiceException;
-import com.insurance.integrationhub.domain.ExecutionLog;
-import com.insurance.integrationhub.domain.FailureType;
-import com.insurance.integrationhub.domain.InterfaceStatus;
-import com.insurance.integrationhub.domain.InterfaceSystem;
-import com.insurance.integrationhub.domain.ProtocolType;
+import com.insurance.integrationhub.domain.*;
 import com.insurance.integrationhub.dto.executions.ExecutionLogResponse;
+import com.insurance.integrationhub.dto.interfaces.CreateInterfaceSystemRequest;
 import com.insurance.integrationhub.dto.interfaces.InterfaceDetailResponse;
 import com.insurance.integrationhub.dto.interfaces.InterfaceResponse;
+import com.insurance.integrationhub.dto.interfaces.UpdateInterfaceSystemRequest;
 import com.insurance.integrationhub.repository.ExecutionLogRepository;
+import com.insurance.integrationhub.repository.ExternalOrganizationRepository;
 import com.insurance.integrationhub.repository.InterfaceSystemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,6 +26,31 @@ public class InterfaceSystemService {
 
     private final InterfaceSystemRepository interfaceSystemRepository;
     private final ExecutionLogRepository executionLogRepository;
+    private final ExternalOrganizationRepository externalOrganizationRepository;
+
+    @Transactional
+    public InterfaceResponse createInterfaceSystem(CreateInterfaceSystemRequest request) {
+        ExternalOrganization organization = externalOrganizationRepository.findById(request.organizationId())
+                .orElseThrow(() -> new ServiceException(ServiceErrorCode.ORGANIZATION_NOT_FOUND));
+
+        InterfaceSystem interfaceSystem = new InterfaceSystem(
+                organization,
+                request.name(),
+                request.protocolType(),
+                InterfaceStatus.PENDING,
+                request.ownerTeam(),
+                request.endpoint(),
+                request.description(),
+                null,
+                null,
+                0
+        );
+
+        InterfaceSystem savedInterfaceSystem =
+                interfaceSystemRepository.save(interfaceSystem);
+
+        return InterfaceResponse.from(savedInterfaceSystem);
+    }
 
     public List<InterfaceResponse> getInterfaces(
             InterfaceStatus status,
@@ -59,6 +83,29 @@ public class InterfaceSystemService {
                 InterfaceResponse.from(interfaceSystem),
                 recentLogs
         );
+    }
+
+    @Transactional
+    public InterfaceResponse updateInterfaceSystem(
+            Long interfaceId,
+            UpdateInterfaceSystemRequest request
+    ) {
+        InterfaceSystem interfaceSystem = interfaceSystemRepository.findById(interfaceId)
+                .orElseThrow(() -> new ServiceException(ServiceErrorCode.INTERFACE_NOT_FOUND));
+
+        ExternalOrganization organization = externalOrganizationRepository.findById(request.organizationId())
+                .orElseThrow(() -> new ServiceException(ServiceErrorCode.ORGANIZATION_NOT_FOUND));
+
+        interfaceSystem.update(
+                organization,
+                request.name(),
+                request.protocolType(),
+                request.ownerTeam(),
+                request.endpoint(),
+                request.description()
+        );
+
+        return InterfaceResponse.from(interfaceSystem);
     }
 
     @Transactional
