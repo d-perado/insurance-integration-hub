@@ -1,10 +1,49 @@
-# Default ignored files
-/shelf/
-/workspace.xml
-# Editor-based HTTP Client requests
-/httpRequests/
-# Ignored default folder with query files
-/queries/
-# Datasource local storage ignored files
-/dataSources/
-/dataSources.local.xml
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE
+# =========================
+.idea/
+*.iml
+.vscode/
+
+# =========================
+# Backend - Spring / Gradle
+# =========================
+backend/.gradle/
+backend/build/
+backend/out/
+backend/bin/
+
+# logs
+backend/*.log
+
+# env
+backend/.env
+backend/application-local.yml
+backend/application-secret.yml
+
+# =========================
+# Frontend - React / Vite
+# =========================
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+
+# env
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.production.local
+
+# =========================
+# Common
+# =========================
+*.log
+*.tmp
+*.swp
