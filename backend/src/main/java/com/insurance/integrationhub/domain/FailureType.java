@@ -6,5 +6,6 @@ public enum FailureType {
     EXTERNAL,
     NETWORK,
     VALIDATION,
-    UNKNOWN
+    UNKNOWN,
+    TIMEOUT
 }

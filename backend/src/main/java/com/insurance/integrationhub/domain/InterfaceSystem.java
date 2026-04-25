@@ -107,4 +107,9 @@ public class InterfaceSystem {
         this.endpoint = endpoint;
         this.description = description;
     }
+
+    public void markAsFailed(LocalDateTime executedAt) {
+        this.status = InterfaceStatus.FAILED;
+        this.lastExecutedAt = executedAt;
+    }
 }

@@ -5,6 +5,7 @@ import com.insurance.integrationhub.domain.InterfaceSystem;
 import com.insurance.integrationhub.domain.ProtocolType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface InterfaceSystemRepository extends JpaRepository<InterfaceSystem, Long> {
@@ -16,4 +17,11 @@ public interface InterfaceSystemRepository extends JpaRepository<InterfaceSystem
     List<InterfaceSystem> findByNameContaining(String keyword);
 
     boolean existsByName(String name);
+
+    boolean existsByNameAndIdNot(String name, Long id);
+
+    List<InterfaceSystem> findByStatusAndLastExecutedAtBefore(
+            InterfaceStatus status,
+            LocalDateTime threshold
+    );
 }
