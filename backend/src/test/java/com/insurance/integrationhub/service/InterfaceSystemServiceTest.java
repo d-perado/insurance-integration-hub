@@ -6,6 +6,7 @@ import com.insurance.integrationhub.domain.*;
 import com.insurance.integrationhub.dto.interfaces.InterfaceDetailResponse;
 import com.insurance.integrationhub.dto.interfaces.InterfaceResponse;
 import com.insurance.integrationhub.repository.ExecutionLogRepository;
+import com.insurance.integrationhub.repository.ExternalOrganizationRepository;
 import com.insurance.integrationhub.repository.InterfaceSystemRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,11 +21,21 @@ import static org.mockito.Mockito.*;
 
 class InterfaceSystemServiceTest {
 
-    private final InterfaceSystemRepository interfaceSystemRepository = mock(InterfaceSystemRepository.class);
-    private final ExecutionLogRepository executionLogRepository = mock(ExecutionLogRepository.class);
+    private final InterfaceSystemRepository interfaceSystemRepository =
+            mock(InterfaceSystemRepository.class);
+
+    private final ExecutionLogRepository executionLogRepository =
+            mock(ExecutionLogRepository.class);
+
+    private final ExternalOrganizationRepository externalOrganizationRepository =
+            mock(ExternalOrganizationRepository.class);
 
     private final InterfaceSystemService interfaceSystemService =
-            new InterfaceSystemService(interfaceSystemRepository, executionLogRepository);
+            new InterfaceSystemService(
+                    interfaceSystemRepository,
+                    executionLogRepository,
+                    externalOrganizationRepository
+            );
 
     @Test
     @DisplayName("인터페이스 목록을 조회한다")
