@@ -14,4 +14,6 @@ public interface InterfaceSystemRepository extends JpaRepository<InterfaceSystem
     List<InterfaceSystem> findByProtocolType(ProtocolType protocolType);
 
     List<InterfaceSystem> findByNameContaining(String keyword);
+
+    boolean existsByName(String name);
 }
