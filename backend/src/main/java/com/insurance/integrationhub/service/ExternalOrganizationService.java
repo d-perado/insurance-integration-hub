@@ -22,6 +22,8 @@ public class ExternalOrganizationService {
 
     @Transactional
     public OrganizationResponse createOrganization(CreateOrganizationRequest request) {
+        validateDuplicateName(request.name());
+
         ExternalOrganization organization = new ExternalOrganization(
                 request.name(),
                 request.managerName(),
@@ -54,6 +56,10 @@ public class ExternalOrganizationService {
     ) {
         ExternalOrganization organization = findOrganization(organizationId);
 
+        if (!organization.getName().equals(request.name())) {
+            validateDuplicateName(request.name());
+        }
+
         organization.update(
                 request.name(),
                 request.managerName(),
@@ -73,5 +79,11 @@ public class ExternalOrganizationService {
     private ExternalOrganization findOrganization(Long organizationId) {
         return externalOrganizationRepository.findById(organizationId)
                 .orElseThrow(() -> new ServiceException(ServiceErrorCode.ORGANIZATION_NOT_FOUND));
+    }
+
+    private void validateDuplicateName(String name) {
+        if (externalOrganizationRepository.existsByName(name)) {
+            throw new ServiceException(ServiceErrorCode.ORGANIZATION_NAME_DUPLICATED);
+        }
     }
 }
