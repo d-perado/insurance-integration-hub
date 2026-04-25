@@ -20,6 +20,8 @@ public interface InterfaceSystemRepository extends JpaRepository<InterfaceSystem
 
     boolean existsByNameAndIdNot(String name, Long id);
 
+    boolean existsByStatus(InterfaceStatus status);
+
     List<InterfaceSystem> findByStatusAndLastExecutedAtBefore(
             InterfaceStatus status,
             LocalDateTime threshold

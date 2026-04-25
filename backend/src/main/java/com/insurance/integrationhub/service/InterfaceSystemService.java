@@ -4,10 +4,7 @@ import com.insurance.integrationhub.common.exception.ServiceErrorCode;
 import com.insurance.integrationhub.common.exception.ServiceException;
 import com.insurance.integrationhub.domain.*;
 import com.insurance.integrationhub.dto.executions.ExecutionLogResponse;
-import com.insurance.integrationhub.dto.interfaces.CreateInterfaceSystemRequest;
-import com.insurance.integrationhub.dto.interfaces.InterfaceDetailResponse;
-import com.insurance.integrationhub.dto.interfaces.InterfaceResponse;
-import com.insurance.integrationhub.dto.interfaces.UpdateInterfaceSystemRequest;
+import com.insurance.integrationhub.dto.interfaces.*;
 import com.insurance.integrationhub.repository.ExecutionLogRepository;
 import com.insurance.integrationhub.repository.ExternalOrganizationRepository;
 import com.insurance.integrationhub.repository.InterfaceSystemRepository;
@@ -112,6 +109,13 @@ public class InterfaceSystemService {
         );
 
         return InterfaceResponse.from(interfaceSystem);
+    }
+
+    public OperationStatusResponse getOperationStatus() {
+        boolean hasFailed =
+                interfaceSystemRepository.existsByStatus(InterfaceStatus.FAILED);
+
+        return new OperationStatusResponse(hasFailed);
     }
 
     private void validateDuplicateName(String name) {

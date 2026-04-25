@@ -36,6 +36,16 @@ export async function getInterfaces(params: GetInterfacesParams = {}) {
     );
 }
 
+export type OperationStatusResponse = {
+    hasFailed: boolean;
+};
+
+export async function getOperationStatus() {
+    return apiRequest<OperationStatusResponse>(
+        "/api/interfaces/operation-status"
+    );
+}
+
 export async function getInterface(interfaceId: number) {
     return apiRequest<InterfaceDetail>(`/api/interfaces/${interfaceId}`);
 }

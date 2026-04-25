@@ -5,6 +5,8 @@ import ProtocolBadge from "../components/ui/ProtocolBadge";
 import StatusBadge from "../components/ui/StatusBadge";
 import {createInterface, getInterface, getInterfaces, retryInterface, updateInterface,} from "../api/interfaceApi";
 import {getOrganizations} from "../api/organizationApi";
+import { useOutletContext } from "react-router-dom";
+import type { AppLayoutContext } from "../components/layout/AppLayout";
 
 const emptyForm: CreateInterfaceRequest = {
     organizationId: 0,
@@ -20,6 +22,8 @@ export default function DashboardPage() {
     const [organizations, setOrganizations] = useState<Organization[]>([]);
     const [selected, setSelected] = useState<InterfaceItem | null>(null);
     const [recentLogs, setRecentLogs] = useState<ExecutionLog[]>([]);
+
+    const { refreshOperationStatus } = useOutletContext<AppLayoutContext>();
 
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<"ALL" | Status>("ALL");
@@ -110,6 +114,7 @@ export default function DashboardPage() {
         try {
             await retryInterface(id);
             await loadInterfaces();
+            refreshOperationStatus();
 
             if (selected?.id === id) {
                 const detail = await getInterface(id);

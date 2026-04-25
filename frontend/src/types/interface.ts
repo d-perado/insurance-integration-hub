@@ -7,7 +7,8 @@ export type FailureType =
     | "CONNECTION_ERROR"
     | "VALIDATION_ERROR"
     | "SYSTEM_ERROR"
-    | "UNKNOWN";
+    | "UNKNOWN"
+    | "TIMEOUT";
 
 export interface InterfaceItem {
     id: number;

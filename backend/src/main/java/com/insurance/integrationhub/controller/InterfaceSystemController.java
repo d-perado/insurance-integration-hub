@@ -3,10 +3,7 @@ package com.insurance.integrationhub.controller;
 import com.insurance.integrationhub.common.response.ApiResponse;
 import com.insurance.integrationhub.domain.InterfaceStatus;
 import com.insurance.integrationhub.domain.ProtocolType;
-import com.insurance.integrationhub.dto.interfaces.CreateInterfaceSystemRequest;
-import com.insurance.integrationhub.dto.interfaces.InterfaceDetailResponse;
-import com.insurance.integrationhub.dto.interfaces.InterfaceResponse;
-import com.insurance.integrationhub.dto.interfaces.UpdateInterfaceSystemRequest;
+import com.insurance.integrationhub.dto.interfaces.*;
 import com.insurance.integrationhub.service.InterfaceSystemService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -87,5 +84,16 @@ public class InterfaceSystemController {
     ) {
         InterfaceResponse response = interfaceService.retryInterface(interfaceId);
         return ApiResponse.success(response, "인터페이스 재실행이 완료되었습니다.");
+    }
+
+    @Operation(
+            summary = "운영 상태 조회",
+            description = "전체 인터페이스 중 FAILED 상태 존재 여부를 조회합니다."
+    )
+    @GetMapping("/operation-status")
+    public ApiResponse<OperationStatusResponse> getOperationStatus() {
+        OperationStatusResponse response = interfaceService.getOperationStatus();
+
+        return ApiResponse.success(response);
     }
 }

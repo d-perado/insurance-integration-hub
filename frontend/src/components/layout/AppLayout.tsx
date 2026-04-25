@@ -1,10 +1,22 @@
 import { Outlet } from "react-router-dom";
+import { useState } from "react";
 import Sidebar from "./Sidebar";
 
+export type AppLayoutContext = {
+    refreshOperationStatus: () => void;
+};
+
 export default function AppLayout() {
+    const [operationStatusRefreshKey, setOperationStatusRefreshKey] =
+        useState(0);
+
+    const refreshOperationStatus = () => {
+        setOperationStatusRefreshKey((prev) => prev + 1);
+    };
+
     return (
         <div className="min-h-screen bg-[#F6F8FB] text-slate-900">
-            <Sidebar />
+            <Sidebar refreshKey={operationStatusRefreshKey} />
 
             <main className="lg:pl-64">
                 <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/80 backdrop-blur">
@@ -19,18 +31,18 @@ export default function AppLayout() {
                         </div>
 
                         <div className="hidden items-center gap-3 md:flex">
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
-                운영 담당자
-              </span>
+                            <span className="rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+                                운영 담당자
+                            </span>
                             <span className="text-sm text-slate-500">
-                기준 시각 2026-04-25 22:45
-              </span>
+                                기준 시각 2026-04-25 22:45
+                            </span>
                         </div>
                     </div>
                 </header>
 
                 <section className="px-6 py-6">
-                    <Outlet />
+                    <Outlet context={{ refreshOperationStatus }} />
                 </section>
             </main>
         </div>

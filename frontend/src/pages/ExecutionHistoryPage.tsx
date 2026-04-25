@@ -6,9 +6,16 @@ import { getExecutionLog, getExecutionLogs } from "../api/executionApi";
 export default function ExecutionHistoryPage() {
     const [logs, setLogs] = useState<ExecutionLog[]>([]);
     const [selectedLog, setSelectedLog] = useState<ExecutionLog | null>(null);
+
     const [statusFilter, setStatusFilter] = useState<"ALL" | Status>("ALL");
     const [failureTypeFilter, setFailureTypeFilter] =
         useState<"ALL" | FailureType>("ALL");
+
+    const [page, setPage] = useState(0);
+    const [size] = useState(10);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
@@ -23,9 +30,13 @@ export default function ExecutionHistoryPage() {
                     failureTypeFilter === "ALL"
                         ? undefined
                         : failureTypeFilter,
+                page,
+                size,
             });
 
-            setLogs(data);
+            setLogs(data.content);
+            setTotalPages(data.totalPages);
+            setTotalElements(data.totalElements);
         } catch (error) {
             setErrorMessage(
                 error instanceof Error
@@ -51,8 +62,12 @@ export default function ExecutionHistoryPage() {
     };
 
     useEffect(() => {
-        loadLogs();
+        setPage(0);
     }, [statusFilter, failureTypeFilter]);
+
+    useEffect(() => {
+        loadLogs();
+    }, [page, statusFilter, failureTypeFilter]);
 
     return (
         <>
@@ -80,6 +95,7 @@ export default function ExecutionHistoryPage() {
                             <option value="SUCCESS">성공</option>
                             <option value="FAILED">실패</option>
                             <option value="PENDING">대기</option>
+                            <option value="RUNNING">실행중</option>
                         </select>
 
                         <select
@@ -92,21 +108,20 @@ export default function ExecutionHistoryPage() {
                             className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
                         >
                             <option value="ALL">전체 실패 유형</option>
-                            <option value="TIMEOUT">TIMEOUT</option>
-                            <option value="CONNECTION_ERROR">
-                                CONNECTION_ERROR
-                            </option>
-                            <option value="VALIDATION_ERROR">
-                                VALIDATION_ERROR
-                            </option>
-                            <option value="SYSTEM_ERROR">
-                                SYSTEM_ERROR
-                            </option>
+                            <option value="NONE">NONE</option>
+                            <option value="INTERNAL">INTERNAL</option>
+                            <option value="EXTERNAL">EXTERNAL</option>
+                            <option value="NETWORK">NETWORK</option>
+                            <option value="VALIDATION">VALIDATION</option>
                             <option value="UNKNOWN">UNKNOWN</option>
+                            <option value="TIMEOUT">TIMEOUT</option>
                         </select>
 
                         <button
-                            onClick={loadLogs}
+                            onClick={() => {
+                                setPage(0);
+                                loadLogs();
+                            }}
                             className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-semibold transition hover:bg-slate-50"
                         >
                             조회
@@ -172,7 +187,10 @@ export default function ExecutionHistoryPage() {
                                     </td>
 
                                     <td className="px-4 py-4">
-                                        {log.responseTimeMs}ms
+                                        {log.responseTimeMs === null ||
+                                        log.responseTimeMs === undefined
+                                            ? "-"
+                                            : `${log.responseTimeMs}ms`}
                                     </td>
 
                                     <td className="px-4 py-4 text-slate-600">
@@ -198,6 +216,37 @@ export default function ExecutionHistoryPage() {
                         )}
                         </tbody>
                     </table>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 text-sm md:flex-row md:items-center md:justify-between">
+                    <p className="text-slate-500">
+                        총 {totalElements}건 · {totalPages === 0 ? 0 : page + 1} /{" "}
+                        {totalPages} 페이지
+                    </p>
+
+                    <div className="flex gap-2">
+                        <button
+                            disabled={page === 0}
+                            onClick={() =>
+                                setPage((prev) => Math.max(prev - 1, 0))
+                            }
+                            className="rounded-xl border border-slate-200 px-4 py-2 font-semibold transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            이전
+                        </button>
+
+                        <button
+                            disabled={totalPages === 0 || page + 1 >= totalPages}
+                            onClick={() =>
+                                setPage((prev) =>
+                                    Math.min(prev + 1, totalPages - 1)
+                                )
+                            }
+                            className="rounded-xl border border-slate-200 px-4 py-2 font-semibold transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            다음
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -230,7 +279,11 @@ function LogDetailModal({
                         </h3>
 
                         <p className="mt-2 text-sm text-slate-500">
-                            {log.executedAt} · 응답시간 {log.responseTimeMs}ms
+                            {log.executedAt} · 응답시간{" "}
+                            {log.responseTimeMs === null ||
+                            log.responseTimeMs === undefined
+                                ? "-"
+                                : `${log.responseTimeMs}ms`}{" "}
                             · 재시도 {log.retryCount}회
                         </p>
                     </div>
@@ -284,13 +337,7 @@ function LogDetailModal({
     );
 }
 
-function InfoBox({
-                     title,
-                     value,
-                 }: {
-    title: string;
-    value: string;
-}) {
+function InfoBox({ title, value }: { title: string; value: string }) {
     return (
         <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm">
             <p className="font-bold text-slate-700">{title}</p>
@@ -299,18 +346,10 @@ function InfoBox({
     );
 }
 
-function PayloadBox({
-                        title,
-                        value,
-                    }: {
-    title: string;
-    value: string;
-}) {
+function PayloadBox({ title, value }: { title: string; value: string }) {
     return (
         <div>
-            <p className="mb-2 text-xs font-bold text-slate-500">
-                {title}
-            </p>
+            <p className="mb-2 text-xs font-bold text-slate-500">{title}</p>
 
             <pre className="max-h-80 overflow-auto rounded-2xl bg-slate-950 p-4 text-xs leading-relaxed text-slate-100">
                 {value}
