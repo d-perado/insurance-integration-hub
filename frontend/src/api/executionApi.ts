@@ -1,10 +1,13 @@
 import { apiRequest } from "./client";
+import type { PageResponse } from "../types/api";
 import type { ExecutionLog, FailureType, Status } from "../types/interface";
 
 interface GetExecutionLogsParams {
     interfaceId?: number;
     status?: Status;
     failureType?: FailureType;
+    page?: number;
+    size?: number;
 }
 
 export async function getExecutionLogs(params: GetExecutionLogsParams = {}) {
@@ -22,10 +25,11 @@ export async function getExecutionLogs(params: GetExecutionLogsParams = {}) {
         searchParams.append("failureType", params.failureType);
     }
 
-    const query = searchParams.toString();
+    searchParams.append("page", String(params.page ?? 0));
+    searchParams.append("size", String(params.size ?? 10));
 
-    return apiRequest<ExecutionLog[]>(
-        query ? `/api/executions?${query}` : "/api/executions"
+    return apiRequest<PageResponse<ExecutionLog>>(
+        `/api/executions?${searchParams.toString()}`
     );
 }
 

@@ -1,30 +1,45 @@
 import { useEffect, useState } from "react";
 import StatusBadge from "../components/ui/StatusBadge";
 import type { ExecutionLog, FailureType, Status } from "../types/interface";
+import type { PageResponse } from "../types/api";
 import { getExecutionLog, getExecutionLogs } from "../api/executionApi";
+
+const PAGE_SIZE = 10;
 
 export default function ExecutionHistoryPage() {
     const [logs, setLogs] = useState<ExecutionLog[]>([]);
+    const [pageInfo, setPageInfo] = useState<PageResponse<ExecutionLog> | null>(null);
     const [selectedLog, setSelectedLog] = useState<ExecutionLog | null>(null);
+
     const [statusFilter, setStatusFilter] = useState<"ALL" | Status>("ALL");
-    const [failureTypeFilter, setFailureTypeFilter] = useState<"ALL" | FailureType>("ALL");
+    const [failureTypeFilter, setFailureTypeFilter] =
+        useState<"ALL" | FailureType>("ALL");
+
+    const [page, setPage] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
-    const loadLogs = async () => {
+    const loadLogs = async (targetPage = page) => {
         setIsLoading(true);
         setErrorMessage("");
 
         try {
             const data = await getExecutionLogs({
                 status: statusFilter === "ALL" ? undefined : statusFilter,
-                failureType: failureTypeFilter === "ALL" ? undefined : failureTypeFilter,
+                failureType:
+                    failureTypeFilter === "ALL" ? undefined : failureTypeFilter,
+                page: targetPage,
+                size: PAGE_SIZE,
             });
 
-            setLogs(data);
+            setLogs(data.content);
+            setPageInfo(data);
+            setPage(data.page);
         } catch (error) {
             setErrorMessage(
-                error instanceof Error ? error.message : "실행 이력 조회 중 오류가 발생했습니다."
+                error instanceof Error
+                    ? error.message
+                    : "실행 이력 조회 중 오류가 발생했습니다."
             );
         } finally {
             setIsLoading(false);
@@ -37,30 +52,43 @@ export default function ExecutionHistoryPage() {
             setSelectedLog(data);
         } catch (error) {
             setErrorMessage(
-                error instanceof Error ? error.message : "실행 로그 상세 조회 중 오류가 발생했습니다."
+                error instanceof Error
+                    ? error.message
+                    : "실행 로그 상세 조회 중 오류가 발생했습니다."
             );
         }
     };
 
     useEffect(() => {
-        loadLogs();
+        setPage(0);
+        loadLogs(0);
     }, [statusFilter, failureTypeFilter]);
+
+    const movePage = (nextPage: number) => {
+        if (nextPage < 0) return;
+        if (pageInfo && nextPage >= pageInfo.totalPages) return;
+
+        loadLogs(nextPage);
+    };
 
     return (
         <>
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-center 2xl:justify-between">
                     <div>
                         <h3 className="text-lg font-bold">실행 이력</h3>
+
                         <p className="mt-1 text-sm text-slate-500">
                             인터페이스 실행 결과와 실패 원인을 시간순으로 확인합니다.
                         </p>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3 2xl:flex 2xl:flex-row">
                         <select
                             value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value as "ALL" | Status)}
+                            onChange={(e) =>
+                                setStatusFilter(e.target.value as "ALL" | Status)
+                            }
                             className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
                         >
                             <option value="ALL">전체 상태</option>
@@ -72,7 +100,9 @@ export default function ExecutionHistoryPage() {
                         <select
                             value={failureTypeFilter}
                             onChange={(e) =>
-                                setFailureTypeFilter(e.target.value as "ALL" | FailureType)
+                                setFailureTypeFilter(
+                                    e.target.value as "ALL" | FailureType
+                                )
                             }
                             className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
                         >
@@ -85,7 +115,7 @@ export default function ExecutionHistoryPage() {
                         </select>
 
                         <button
-                            onClick={loadLogs}
+                            onClick={() => loadLogs(0)}
                             className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-semibold transition hover:bg-slate-50"
                         >
                             조회
@@ -99,8 +129,8 @@ export default function ExecutionHistoryPage() {
                     </div>
                 )}
 
-                <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
-                    <table className="w-full text-sm">
+                <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
+                    <table className="min-w-[1000px] w-full text-sm">
                         <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                         <tr>
                             <th className="px-4 py-3">실행 시간</th>
@@ -116,31 +146,49 @@ export default function ExecutionHistoryPage() {
                         <tbody className="divide-y divide-slate-100">
                         {isLoading ? (
                             <tr>
-                                <td colSpan={7} className="px-4 py-10 text-center text-slate-500">
+                                <td
+                                    colSpan={7}
+                                    className="px-4 py-10 text-center text-slate-500"
+                                >
                                     데이터를 불러오는 중입니다.
                                 </td>
                             </tr>
                         ) : logs.length === 0 ? (
                             <tr>
-                                <td colSpan={7} className="px-4 py-10 text-center text-slate-500">
+                                <td
+                                    colSpan={7}
+                                    className="px-4 py-10 text-center text-slate-500"
+                                >
                                     조회된 실행 이력이 없습니다.
                                 </td>
                             </tr>
                         ) : (
                             logs.map((log) => (
                                 <tr key={log.id} className="hover:bg-slate-50">
-                                    <td className="px-4 py-4 text-slate-600">{log.executedAt}</td>
-                                    <td className="px-4 py-4 font-semibold">{log.interfaceName}</td>
+                                    <td className="px-4 py-4 text-slate-600">
+                                        {log.executedAt}
+                                    </td>
+
+                                    <td className="px-4 py-4 font-semibold">
+                                        {log.interfaceName}
+                                    </td>
+
                                     <td className="px-4 py-4">
                                         <StatusBadge status={log.status} />
                                     </td>
-                                    <td className="px-4 py-4">{log.responseTimeMs}ms</td>
+
+                                    <td className="px-4 py-4">
+                                        {log.responseTimeMs}ms
+                                    </td>
+
                                     <td className="px-4 py-4 text-slate-600">
                                         {log.failureType ?? "-"}
                                     </td>
+
                                     <td className="px-4 py-4 text-slate-600">
                                         {log.errorMessage ?? "정상 처리"}
                                     </td>
+
                                     <td className="px-4 py-4 text-right">
                                         <button
                                             onClick={() => openLogDetail(log.id)}
@@ -155,10 +203,38 @@ export default function ExecutionHistoryPage() {
                         </tbody>
                     </table>
                 </div>
+
+                <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-5 md:flex-row md:items-center md:justify-between">
+                    <p className="text-sm text-slate-500">
+                        총 {pageInfo?.totalElements ?? 0}건 · {page + 1} /{" "}
+                        {pageInfo?.totalPages === 0 ? 1 : pageInfo?.totalPages ?? 1} 페이지
+                    </p>
+
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => movePage(page - 1)}
+                            disabled={pageInfo?.first ?? true}
+                            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            이전
+                        </button>
+
+                        <button
+                            onClick={() => movePage(page + 1)}
+                            disabled={pageInfo?.last ?? true}
+                            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            다음
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {selectedLog && (
-                <LogDetailModal log={selectedLog} onClose={() => setSelectedLog(null)} />
+                <LogDetailModal
+                    log={selectedLog}
+                    onClose={() => setSelectedLog(null)}
+                />
             )}
         </>
     );
@@ -174,28 +250,44 @@ function LogDetailModal({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4">
             <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
-                <div className="flex items-start justify-between border-b border-slate-100 px-7 py-6">
+                <div className="flex flex-col gap-4 border-b border-slate-100 px-7 py-6 2xl:flex-row 2xl:items-start 2xl:justify-between">
                     <div>
                         <StatusBadge status={log.status} />
-                        <h3 className="mt-3 text-2xl font-bold">{log.interfaceName}</h3>
+
+                        <h3 className="mt-3 text-2xl font-bold">
+                            {log.interfaceName}
+                        </h3>
+
                         <p className="mt-2 text-sm text-slate-500">
-                            {log.executedAt} · 응답시간 {log.responseTimeMs}ms · 재시도 {log.retryCount}회
+                            {log.executedAt} · 응답시간 {log.responseTimeMs}ms ·
+                            재시도 {log.retryCount}회
                         </p>
                     </div>
 
                     <button
                         onClick={onClose}
-                        className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50"
+                        className="w-fit rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold transition hover:bg-slate-50"
                     >
                         닫기
                     </button>
                 </div>
 
                 <div className="space-y-5 px-7 py-6">
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <InfoBox title="실패 유형" value={log.failureType ?? "-"} />
-                        <InfoBox title="실패 원인" value={log.failureReason ?? "-"} />
-                        <InfoBox title="조치 방안" value={log.suggestedAction ?? "-"} />
+                    <div className="grid gap-4 2xl:grid-cols-3">
+                        <InfoBox
+                            title="실패 유형"
+                            value={log.failureType ?? "-"}
+                        />
+
+                        <InfoBox
+                            title="실패 원인"
+                            value={log.failureReason ?? "-"}
+                        />
+
+                        <InfoBox
+                            title="조치 방안"
+                            value={log.suggestedAction ?? "-"}
+                        />
                     </div>
 
                     {log.errorMessage && (
@@ -204,9 +296,16 @@ function LogDetailModal({
                         </div>
                     )}
 
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <PayloadBox title="Request Payload" value={log.requestPayload ?? "-"} />
-                        <PayloadBox title="Response Payload" value={log.responsePayload ?? "-"} />
+                    <div className="grid gap-4 2xl:grid-cols-2">
+                        <PayloadBox
+                            title="Request Payload"
+                            value={log.requestPayload ?? "-"}
+                        />
+
+                        <PayloadBox
+                            title="Response Payload"
+                            value={log.responsePayload ?? "-"}
+                        />
                     </div>
                 </div>
             </div>
@@ -223,10 +322,17 @@ function InfoBox({ title, value }: { title: string; value: string }) {
     );
 }
 
-function PayloadBox({ title, value }: { title: string; value: string }) {
+function PayloadBox({
+                        title,
+                        value,
+                    }: {
+    title: string;
+    value: string;
+}) {
     return (
         <div>
             <p className="mb-2 text-xs font-bold text-slate-500">{title}</p>
+
             <pre className="max-h-80 overflow-auto rounded-2xl bg-slate-950 p-4 text-xs leading-relaxed text-slate-100">
                 {value}
             </pre>
